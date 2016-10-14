@@ -130,6 +130,8 @@ class Forms3rdpartyPostAgain {
 
 	function xml_to_array($root) {
 		// based on http://stackoverflow.com/a/14554381/1037948
+		// TODO: strip namespaces
+		
 		$result = array();
 
 		if ($root->hasAttributes()) {
