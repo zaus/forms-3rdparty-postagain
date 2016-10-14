@@ -1,7 +1,7 @@
 <?php
 /*
 
-Plugin Name: Forms: 3rd-Party Integration Post Again
+Plugin Name: Forms: 3rd-Party Post Again
 Plugin URI: https://github.com/zaus/forms-3rdparty-postagain
 Description: Make a second service submission using Forms: 3rdparty Integration
 Author: zaus
