@@ -108,17 +108,88 @@ class Forms3rdpartyPostAgain {
 
 	function parse($body) {
 		// what kind of response is it?
-		if(substr(trim($body), 0, 5) == '<?xml') {
+		/*if(substr(trim($body), 0, 5) == '<?xml') {
+			// simplexml can't handle wacky namespaces?
 			$body = substr($body, strpos($body, '?>')+2);
-			$content = simplexml_load_string( $body );
+			$content = $this->parse( $body );
 		}
-		elseif(substr(trim($body), 0, 1) == '<') $content = simplexml_load_string( $body );
+		else*/if(substr(trim($body), 0, 1) == '<') {
+			// $content = simplexml_load_string( $body );
+			$dom = new DomDocument();
+			$dom->loadXML($body);
+			$content = $this->xml_to_array($dom);
+			_log('parsed xml dom', $content);
+		}
 		elseif(substr(trim($body), 0, 1) == '{') $content = json_decode($body, true);
 		else throw new Exception('Unknown body type, starting with: ' . substr(trim($body), 0, 10));
 
 		### _log('f3p-again--'.__FUNCTION__, $content);
 
 		return $this->flattenWithKeys( (array) $content );
+	}
+
+	function getArray($node) {
+		// http://php.net/manual/en/class.domdocument.php#101014
+		$array = [];
+
+		if ($node->hasAttributes()) {
+			foreach ($node->attributes as $attr) {
+				$array['@' . $attr->nodeName] = $attr->nodeValue;
+			}
+		}
+
+		if ($node->hasChildNodes()) {
+			if ($node->childNodes->length == 1) {
+				$array[$node->firstChild->nodeName] = $node->firstChild->nodeValue;
+			} else {
+				foreach ($node->childNodes as $childNode) {
+					if ($childNode->nodeType != XML_TEXT_NODE) {
+						$array[$childNode->nodeName][] = $this->getArray($childNode);
+					}
+				}
+			}
+		}
+
+		return $array;
+	}
+
+	function xml_to_array($root) {
+		// based on http://stackoverflow.com/a/14554381/1037948
+		$result = array();
+
+		if ($root->hasAttributes()) {
+			$attrs = $root->attributes;
+			foreach ($attrs as $attr) {
+				$result['@' . $attr->name] = $attr->value;
+			}
+		}
+
+		if ($root->hasChildNodes()) {
+			$children = $root->childNodes;
+			if ($children->length == 1) {
+				$child = $children->item(0);
+				if ($child->nodeType == XML_TEXT_NODE || $child->nodeType == XML_CDATA_SECTION_NODE) {
+					$result['#t'] = $child->nodeValue;
+					return count($result) == 1
+						? $result['#t']
+						: $result;
+				}
+			}
+			$groups = array();
+			foreach ($children as $child) {
+				if (!isset($result[$child->nodeName])) {
+					$result[$child->nodeName] = $this->xml_to_array($child);
+				} else {
+					if (!isset($groups[$child->nodeName])) {
+						$result[$child->nodeName] = array($result[$child->nodeName]);
+						$groups[$child->nodeName] = 1;
+					}
+					$result[$child->nodeName][] = $this->xml_to_array($child);
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	function flattenWithKeys(array $array, $childPrefix = '.', $root = '', $result = array()) {
