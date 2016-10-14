@@ -118,7 +118,7 @@ class Forms3rdpartyPostAgain {
 			$dom = new DomDocument();
 			$dom->loadXML($body);
 			$content = $this->xml_to_array($dom);
-			_log('parsed xml dom', $content);
+			### _log('parsed xml dom', $content);
 		}
 		elseif(substr(trim($body), 0, 1) == '{') $content = json_decode($body, true);
 		else throw new Exception('Unknown body type, starting with: ' . substr(trim($body), 0, 10));
@@ -128,38 +128,12 @@ class Forms3rdpartyPostAgain {
 		return $this->flattenWithKeys( (array) $content );
 	}
 
-	function getArray($node) {
-		// http://php.net/manual/en/class.domdocument.php#101014
-		$array = [];
-
-		if ($node->hasAttributes()) {
-			foreach ($node->attributes as $attr) {
-				$array['@' . $attr->nodeName] = $attr->nodeValue;
-			}
-		}
-
-		if ($node->hasChildNodes()) {
-			if ($node->childNodes->length == 1) {
-				$array[$node->firstChild->nodeName] = $node->firstChild->nodeValue;
-			} else {
-				foreach ($node->childNodes as $childNode) {
-					if ($childNode->nodeType != XML_TEXT_NODE) {
-						$array[$childNode->nodeName][] = $this->getArray($childNode);
-					}
-				}
-			}
-		}
-
-		return $array;
-	}
-
 	function xml_to_array($root) {
 		// based on http://stackoverflow.com/a/14554381/1037948
 		$result = array();
 
 		if ($root->hasAttributes()) {
-			$attrs = $root->attributes;
-			foreach ($attrs as $attr) {
+			foreach ($root->attributes as $attr) {
 				$result['@' . $attr->name] = $attr->value;
 			}
 		}
@@ -177,6 +151,8 @@ class Forms3rdpartyPostAgain {
 			}
 			$groups = array();
 			foreach ($children as $child) {
+				if($child->nodeType == XML_TEXT_NODE && empty(trim($child->nodeValue))) continue;
+				### _log(XML_TEXT_NODE, $child->nodeType, $child->nodeName, json_encode($child->nodeValue));
 				if (!isset($result[$child->nodeName])) {
 					$result[$child->nodeName] = $this->xml_to_array($child);
 				} else {
@@ -192,7 +168,7 @@ class Forms3rdpartyPostAgain {
 		return $result;
 	}
 
-	function flattenWithKeys(array $array, $childPrefix = '.', $root = '', $result = array()) {
+	function flattenWithKeys(array $array, $childPrefix = '/', $root = '', $result = array()) {
 		// https://gist.github.com/kohnmd/11197713#gistcomment-1895523
 
 		foreach($array as $k => $v) {
