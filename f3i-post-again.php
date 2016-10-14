@@ -57,7 +57,6 @@ class Forms3rdpartyPostAgain {
 		if(!isset($service[self::FIELD]) || empty($service[self::FIELD])) return $submission;
 
 		$reposts = (array) $service[self::FIELD];
-		_log('f3p-again--'.__FUNCTION__, $reposts, $submission);
 
 		// save for later; should be okay in multi-resend scenario since it traverses services in order
 		$this->submission = $submission;
@@ -66,6 +65,14 @@ class Forms3rdpartyPostAgain {
 
 		return $submission;
 	}
+
+	/**
+	 * Actually attach followup, secondary post only to this `service_a` hook
+	 * @param bool $use_this_form filter return value
+	 * @param $submission user submission
+	 * @param $sid the current form's id
+	 * @return mixed
+	 */
 	function attach2($use_this_form, $submission, $sid) {
 		if(!$use_this_form) return $use_this_form;
 
@@ -78,22 +85,17 @@ class Forms3rdpartyPostAgain {
 
 	function resend($body, $param_ref) {
 		extract($param_ref); //array('success'=>false, 'errors'=>false, 'attach'=>'', 'message' => '')
-		$sid = current_filter();
-		_log('SID', $sid);
-		$sid = explode(' service_a', $sid);
-		$sid = end($sid);
 
 		$f3p = Forms3rdPartyIntegration::$instance;
 		$debug = $f3p->get_settings();
 
-		_log('f3p-again--'.__FUNCTION__, $body);
 		$resultsArgs = $this->parse($body);
 		$submission = $resultsArgs + $this->submission;
-		_log('f3p-again--'.__FUNCTION__, $resultsArgs, $submission);
+		### _log('f3p-again--'.__FUNCTION__, $body, $resultsArgs, $submission);
 
 		foreach($this->reposts as $sid) {
 			$service = $f3p->get_services()[$sid];
-			_log('f3p-again--'.__FUNCTION__, $sid, $service);
+			### _log('f3p-again--'.__FUNCTION__, $sid, $service);
 			$sendResult = $f3p->send($submission, $this->form, $service, $sid, $debug);
 			if($sendResult === Forms3rdPartyIntegration::RET_SEND_STOP || $sendResult === Forms3rdPartyIntegration::RET_SEND_SKIP) return;
 
@@ -106,11 +108,15 @@ class Forms3rdpartyPostAgain {
 
 	function parse($body) {
 		// what kind of response is it?
-		if(substr(trim($body), 0, 5) == '<?xml') $content = new SimpleXMLElement($body);
+		if(substr(trim($body), 0, 5) == '<?xml') {
+			$body = substr($body, strpos($body, '?>')+2);
+			$content = simplexml_load_string( $body );
+		}
+		elseif(substr(trim($body), 0, 1) == '<') $content = simplexml_load_string( $body );
 		elseif(substr(trim($body), 0, 1) == '{') $content = json_decode($body, true);
 		else throw new Exception('Unknown body type, starting with: ' . substr(trim($body), 0, 10));
 
-		_log('f3p-again--'.__FUNCTION__, $content);
+		### _log('f3p-again--'.__FUNCTION__, $content);
 
 		return $this->flattenWithKeys( (array) $content );
 	}
@@ -119,7 +125,7 @@ class Forms3rdpartyPostAgain {
 		// https://gist.github.com/kohnmd/11197713#gistcomment-1895523
 
 		foreach($array as $k => $v) {
-			if(is_array($v) || is_object($v)) $result = flattenWithKeys( (array) $v, $childPrefix, $root . $k . $childPrefix, $result);
+			if(is_array($v) || is_object($v)) $result = $this->flattenWithKeys( (array) $v, $childPrefix, $root . $k . $childPrefix, $result);
 			else $result[ $root . $k ] = $v;
 		}
 		return $result;
