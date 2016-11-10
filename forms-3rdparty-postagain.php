@@ -5,11 +5,12 @@ Plugin Name: Forms: 3rd-Party Post Again
 Plugin URI: https://github.com/zaus/forms-3rdparty-postagain
 Description: Make a second service submission using Forms: 3rdparty Integration
 Author: zaus
-Version: 0.2
+Version: 0.3
 Author URI: http://drzaus.com
 Changelog:
 	0.1	it begins
 	0.2	jeez xml parsing is dumb...json ftw
+	0.3	don't throw exception on unknown response type
 */
 
 class Forms3rdpartyPostAgain {
@@ -109,20 +110,22 @@ class Forms3rdpartyPostAgain {
 
 	function parse($body) {
 		// what kind of response is it?
+		$body = trim($body);
+		$first = substr($body, 0, 1);
 		/*if(substr(trim($body), 0, 5) == '<?xml') {
 			// simplexml can't handle wacky namespaces?
 			$body = substr($body, strpos($body, '?>')+2);
 			$content = $this->parse( $body );
 		}
-		else*/if(substr(trim($body), 0, 1) == '<') {
+		else*/if($first == '<') {
 			// $content = simplexml_load_string( $body );
 			$dom = new DomDocument();
 			$dom->loadXML($body);
 			$content = $this->xml_to_array($dom);
 			### _log('parsed xml dom', $content);
 		}
-		elseif(substr(trim($body), 0, 1) == '{') $content = json_decode($body, true);
-		else throw new Exception('Unknown body type, starting with: ' . substr(trim($body), 0, 10));
+		elseif($first == '{') $content = json_decode($body, true);
+		else $content = array('#CONTENT' => $body);
 
 		### _log('f3p-again--'.__FUNCTION__, $content);
 

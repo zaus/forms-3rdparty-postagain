@@ -53,6 +53,10 @@ N/A.
 
 == Changelog ==
 
+= 0.3 =
+* no longer throws Exception on unknown response type because it unhelpfully breaks the page
+* instead just includes the non-XML/JSON response as `#CONTENT`
+
 = 0.1 =
 
 IT HAS BEGUN
