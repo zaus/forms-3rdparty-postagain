@@ -22,7 +22,6 @@ class Forms3rdpartyPostAgain {
 	function init() {
 		// prepare for attachment -- use this as a convenient hook to access $services and remember $submission
 		add_action(Forms3rdPartyIntegration::$instance->N('get_submission'), array(&$this, 'attach'), 100, 3);
-		add_action(Forms3rdPartyIntegration::$instance->N('use_submission'), array(&$this, 'attach2'), 100, 3);
 		// configure whether to attach or not, how
 		add_filter(Forms3rdPartyIntegration::$instance->N('service_settings'), array(&$this, 'service_settings'), 10, 3);
 	}
@@ -57,6 +56,8 @@ class Forms3rdpartyPostAgain {
 
 	function attach($submission, $form, $service) {
 		if(!isset($service[self::FIELD]) || empty($service[self::FIELD])) return $submission;
+
+		add_action(Forms3rdPartyIntegration::$instance->N('use_submission'), array(&$this, 'attach2'), 100, 3);
 
 		$reposts = (array) $service[self::FIELD];
 
